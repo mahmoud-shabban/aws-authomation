@@ -2,12 +2,7 @@ import boto3
 from botocore.config import Config
 
 
-#######################
-# set the environement variables
-# export AWS_ACCESS_KEY_ID="AKIAWOXK5EJXUSU6D267"
-# export AWS_SECRET_ACCESS_KEY="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"
-#
-################
+
 
 
 # boto3 configurations
@@ -17,8 +12,8 @@ config = Config(
 
 desired_tags = {
     "Environment": "SANDBOX",
-    "Project": "vf-grp-ias-dev-ias-sanbox",
-    "ManagedBy": "o-380-dl-vci-secretsmanagement@vodafone.onmicrosoft.com",
+    "Project": "grp-sanbox",
+    "ManagedBy": "o-380-dlm",
     "SecurityZone": "DEV",
     "Confidentiality": "C2",
     "TaggingVersion": "V2.4"
