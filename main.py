@@ -2,16 +2,7 @@ import boto3
 from botocore.config import Config
 import os 
 
-#######################
-# set the environement variables 
-# these are personal
-# export AWS_ACCESS_KEY_ID="AKIAWOXK5EJXUSU6D267"
-# export AWS_SECRET_ACCESS_KEY="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"
-#
-################
 
-os.environ['AWS_ACCESS_KEY_ID'] = "AKIATG7EOTWKYB5O4B4A"
-os.environ['AWS_SECRET_ACCESS_KEY'] = "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"
 
 
 regions = ['eu-west-2']
@@ -22,8 +13,8 @@ regions = ['eu-west-2']
 
 desired_tags = {
     "Environment": "SANDBOX",
-    "Project": "vf-grp-ias-dev-ias-sanbox",
-    "ManagedBy": "o-380-dl-vci-secretsmanagement@vodafone.onmicrosoft.com",
+    "Project": "grp-sanbox",
+    "ManagedBy": "o-380-dlm",
     "SecurityZone": "DEV",
     "Confidentiality": "C2",
     "TaggingVersion": "V2.4"
