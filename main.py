@@ -1,7 +1,6 @@
 import boto3
-from botocore.config import Config
-import os 
-
+# from botocore.config import Config
+# import os 
 
 
 
