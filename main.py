@@ -12,13 +12,93 @@ regions = ['eu-west-2']
 
 desired_tags = {
     "Environment": "SANDBOX",
-    "Project": "grp-sanbox",
-    "ManagedBy": "o-380-dlm",
+    "Project": "vf-grp-ias-dev-ias-sanbox",
+    "ManagedBy": "o-380-dl-vci-secretsmanagement@vodafone.onmicrosoft.com",
     "SecurityZone": "DEV",
     "Confidentiality": "C2",
     "TaggingVersion": "V2.4"
 }
 
+tags = [{'Key': k, 'Value': v} for k,v in desired_tags.items()]
+
+############ VPC Tagging ######################
+def tag_vpcs(region, tags):
+    ec2 = boto3.client('ec2', region_name= region)
+
+    def get_vpc_ids():
+        resp = ec2.describe_vpcs()
+        vpc_ids = []
+        no_tags_vpcs = []
+        for vpc in resp['Vpcs'] :
+            if vpc.get("Tags") and len(vpc["Tags"]) >= len(tags):
+                no_tags_vpcs.append(vpc["VpcId"])
+            else:
+                vpc_ids.append(vpc["VpcId"]) 
+
+        return vpc_ids, no_tags_vpcs
+    
+    ids, no_tags_vpcs = get_vpc_ids()
+    # create the tags
+    if len(ids) != 0 :
+        resp = ec2.create_tags(
+            Resources = ids,
+            Tags = tags
+        )
+        if resp["ResponseMetadata"]["HTTPStatusCode"] == 200:
+            for id in ids:
+                print('Tags added to VPC: ', id)
+        else:
+            print('Error: Tags not added to VPCs: ', ids)
+    for id in no_tags_vpcs:
+        print('No tags to add to VPC: ', id)
+
+
+############ Subnets Tagging ######################
+def tag_subnets(region, tags):
+    ec2 = boto3.client('ec2', region_name= region)
+
+    def get_subnet_ids(region):
+        resp = ec2.describe_subnets()
+        subnet_ids = []
+        for subnet in resp["Subnets"] :
+            subnet_ids.append(subnet["SubnetId"])
+
+        return subnet_ids
+    
+    ids = get_subnet_ids(region)
+    # create the tags
+    resp = ec2.create_tags(
+        Resources = ids,
+        Tags = tags
+    )
+    if resp["ResponseMetadata"]["HTTPStatusCode"] == 200:
+        for id in ids:
+            print('Tags added to Subnet: ', id)
+    else:
+        print('No Tags added to Subnet: ', ids) 
+
+############ EC2 Tagging ######################
+def tag_ec2(region, tags):
+    ec2 = boto3.client('ec2', region_name= region)
+    def get_ec2_ids(region):
+        resp = ec2.describe_instances()
+        ec2_ids = []
+        for instance in resp[ "Reservations"][0]["Instances"]:
+            ec2_ids.append(instance["InstanceId"])
+
+        return ec2_ids
+    
+    ids = get_ec2_ids(region)
+
+    resp = ec2.create_tags(
+        Resources = ids ,
+        Tags = tags
+    )
+    if resp["ResponseMetadata"]["HTTPStatusCode"] == 200:
+        for id in ids:
+            print('Tags added to EC2: ', id)
+    else:
+        print('No Tags added to EC2s: ', ids)
 
 
 ############ EBS Volumes Tagging ######################
@@ -69,23 +149,7 @@ def create_ebs_tags(vol_ids, region):
             print('Tags added to Volume: ', id )
 
 
-
-
 ################ LB tagging ################
-
-missed_tags = [{"Key": key, "Value": desired_tags[key]} for key in desired_tags]
-def get_elbv2_client(region):
-    """
-    this function will create and elastic load balancer v2 client instance and return it back.
-    
-    :param: 
-        None
-    :return: 
-        lb: elbv2 client instance
-    """
-    lb = boto3.client('elbv2', region_name=region)
-    return lb 
-
 def get_elbv2_arn(lb_client):
     """
     this function will get elastic load balancers v2 resource arns to be used for tag creation.
@@ -103,7 +167,7 @@ def get_elbv2_arn(lb_client):
         for i in resp['LoadBalancers']:
             lb_arns.append(i['LoadBalancerArn'])
         return lb_arns
-
+    
 def create_elbv2_tags(tags, arns, lb_client):
     """
     this function will create elastic load balancers v2 tags.
@@ -122,7 +186,7 @@ def create_elbv2_tags(tags, arns, lb_client):
         )
         print('Tags added to Load Balancer: ', arn )
 
-def update_elbv2_tags(region):
+def update_elbv2_tags(region, tags):
     """
     this function will implement all the logic for updating the tags of the resources.
 
@@ -131,46 +195,60 @@ def update_elbv2_tags(region):
     :return: 
         None
     """
-    lb_client = get_elbv2_client(region)
+    lb_client = boto3.client('elbv2', region_name=region)
     lb_arns  = get_elbv2_arn(lb_client=lb_client)
     if len(lb_arns) == 0:
         print( "You Don't have any load balancers")
         return
     else:
-        create_elbv2_tags(tags= missed_tags, arns= lb_arns, lb_client= lb_client)
+        create_elbv2_tags(tags= tags, arns= lb_arns, lb_client= lb_client)
 
 #################### Security Group tagging ###################
     
-def get_all_security_groups(region):
-    """
-     this function will return a list of all security groups
-    :param:
-        None 
-    :return:
-        sg_ids: list of all security groups
-    """
-    ec2 = boto3.client('ec2', region_name=region)
-    resp = ec2.describe_security_groups()
-    sg_ids = []
-    for sg in resp["SecurityGroups"]:
-        sg_ids.append(sg["GroupId"])
-
-    return sg_ids
-
-def tag_sg(sg_ids, region):
+def tag_sg( region, tags):
     """
     this function will add the desired tags to the security groups
     :param:
         sg_ids: list of all security groups
+        region: str, the aws region
+        tags  : list(dict), tags to be added
     :return:
         None
     """
-    sg_ids = get_all_security_groups(region)
-    for id in sg_ids:
-        ec2_r = boto3.resource('ec2', region_name=region)
-        security_group = ec2_r.SecurityGroup(id)
-        security_group.create_tags(Tags=missed_tags)
-        print("Tags added to security group: ", id)
+    ec2 = boto3.client('ec2', region_name=region)
+    def get_sg_ids():
+        """
+        this function will return a list of all security groups
+        :param:
+            None 
+        :return:
+            sg_ids: list of all security groups
+        """
+        resp = ec2.describe_security_groups()
+        # sg add tags to. 
+        sg_ids = []
+        # sg don't add tags to. 
+        no_tags_sgs = []
+        for sg in resp["SecurityGroups"] :
+            if sg.get("Tags") and len(sg["Tags"]) >= len(tags):
+                no_tags_sgs.append(sg["GroupId"])
+            else:
+                sg_ids.append(sg["GroupId"]) 
+        return sg_ids, no_tags_sgs
+
+    ids, no_tags_sgs = get_sg_ids()
+    if len(ids) != 0 :
+        resp = ec2.create_tags(
+            Resources = ids,
+            Tags = tags
+        )
+        if resp["ResponseMetadata"]["HTTPStatusCode"] == 200:
+            for id in ids:
+                print('Tags added to Security Group: ', id)
+        else:
+            print('Error: Tags not added to Security Groups: ', ids)
+    for id in no_tags_sgs:
+        print('No tags to add to Security Group: ', id)
         
 ###############################
 #   ACL (to be saitized)
@@ -228,11 +306,13 @@ if __name__=='__main__':
     for region in regions:
         print('For Region: ', region)
         print('#'*20)
+        tag_vpcs(region, tags) # updated
+        tag_subnets(region, tags)
+        tag_ec2(region, tags)
         vol_ids = get_vol_ids(region)
         create_ebs_tags(vol_ids, region)
-        update_elbv2_tags(region)
-        sg_ids = get_all_security_groups(region)
-        tag_sg(sg_ids, region)
+        update_elbv2_tags(region, tags)
+        tag_sg(region, tags) # updated
         tag_acls(region)
         tag_route_table(region)
 
