@@ -83,8 +83,9 @@ def tag_ec2(region, tags):
     def get_ec2_ids(region):
         resp = ec2.describe_instances()
         ec2_ids = []
-        for instance in resp[ "Reservations"][0]["Instances"]:
-            ec2_ids.append(instance["InstanceId"])
+        for reservation in resp[ "Reservations"]:
+            for instance in reservation["Instances"]:
+                ec2_ids.append(instance["InstanceId"])
 
         return ec2_ids
     
@@ -283,9 +284,8 @@ def tag_route_table(region):
     def get_rtb_ids(ec2_client):
         resp = ec2_client.describe_route_tables()
         rtb_ids = []
-        for acl in resp[ "RouteTables"] :
-            rtb_ids.append(acl['Associations'][0]["RouteTableId"])
-        
+        for rtb in resp[ "RouteTables"] :
+            rtb_ids.append(rtb["RouteTableId"])
         return rtb_ids
 
     ids = get_rtb_ids(ec2)
