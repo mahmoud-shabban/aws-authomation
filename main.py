@@ -90,7 +90,8 @@ def tag_ec2(region, tags):
         return ec2_ids
     
     ids = get_ec2_ids(region)
-
+    if len(ids) == 0:
+        return "No EC2 found!"
     resp = ec2.create_tags(
         Resources = ids ,
         Tags = tags
@@ -137,7 +138,7 @@ def create_ebs_tags(vol_ids, region):
             missed_tags = [{"Key": key, "Value": desired_tags[key]} for key in diff]
             # if there are not missing tags.
             if len(missed_tags) == 0:
-                print('no ebs tags to add')
+                print('No tags to add to volume: ', id)
                 continue
             # if there are some missing tags add them.
             else:
