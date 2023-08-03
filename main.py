@@ -5,7 +5,10 @@ import boto3
 
 
 regions = ['eu-west-2']
-
+# boto3 configurations
+# config = Config(
+#     region_name= region
+# )
 
 desired_tags = {
     "Environment": "SANDBOX",
